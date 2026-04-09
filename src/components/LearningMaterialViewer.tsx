@@ -15,6 +15,7 @@ import { safeLocalStorage } from "@/lib/utils/localStorage";
 
 // Add import for ChatView
 import ChatView from "./ChatView";
+import ModuleDiscussionPanel, { type CommunityTab } from "./ModuleDiscussionPanel";
 import { ChatMessage } from "../types/quiz";
 import { useAuth } from "@/lib/auth";
 import { useThemePreference } from "@/lib/hooks/useThemePreference";
@@ -32,6 +33,15 @@ interface LearningMaterialViewerProps {
     viewOnly?: boolean;
     onMarkComplete?: () => void;
     onChatOpenChange?: (isOpen: boolean) => void;
+    /** When set with course + cohort + milestone, learner can open the community panel in the chat column. */
+    discussionCohortId?: string;
+    discussionCourseId?: string;
+    discussionMilestoneId?: string;
+    /** Increment (e.g. from parent header) to open chat on the community panel. */
+    communityFocusSeq?: number;
+    /** Which community tab to show when `communityFocusSeq` bumps. */
+    communityInitialTab?: CommunityTab;
+    discussionQuestionId?: string | null;
 }
 
 export default function LearningMaterialViewer({
@@ -42,6 +52,12 @@ export default function LearningMaterialViewer({
     viewOnly = false,
     onMarkComplete,
     onChatOpenChange,
+    discussionCohortId,
+    discussionCourseId,
+    discussionMilestoneId,
+    communityFocusSeq = 0,
+    communityInitialTab = "discussion",
+    discussionQuestionId = null,
 }: LearningMaterialViewerProps) {
     const { user } = useAuth();
     // Use global theme (html.dark) as the source of truth.
@@ -76,6 +92,22 @@ export default function LearningMaterialViewer({
 
     // Mobile view mode for responsive layout
     const [mobileViewMode, setMobileViewMode] = useState<'content-full' | 'chat-full' | 'split'>('split');
+
+    const [rightColumnMode, setRightColumnMode] = useState<"ai" | "community">("ai");
+
+    const discussionEnabled = Boolean(
+        discussionCohortId &&
+            discussionCourseId &&
+            discussionMilestoneId &&
+            userId &&
+            !viewOnly
+    );
+
+    useEffect(() => {
+        if (!communityFocusSeq) return;
+        setShowChatView(true);
+        setRightColumnMode("community");
+    }, [communityFocusSeq]);
 
     // Notify parent when the chat overlay opens/closes.
     // Important: do this in an effect (not inside a state updater) to avoid
@@ -408,7 +440,11 @@ export default function LearningMaterialViewer({
                 setIsChatClosing(false);
             }, 300); // Match this with animation duration
         } else {
-            setShowChatView(prev => !prev);
+            setShowChatView((prev) => {
+                const next = !prev;
+                if (next) setRightColumnMode("ai");
+                return next;
+            });
         }
     };
 
@@ -725,34 +761,56 @@ export default function LearningMaterialViewer({
 
                 {/* Chat Container - Only visible when showChatView is true */}
                 {showChatView && (
-                    <div className={`${isMobileView ? `mobile-chat-container ${isChatClosing ? 'slide-down' : ''}` : 'flex flex-col h-full overflow-hidden lg:border-l lg:border-t-0 sm:border-t sm:border-l-0 bg-white dark:bg-[#111111] border-gray-200 dark:border-[#222222]'} chat-container`}>
-                        <div className="chat-header flex justify-between items-center px-4 py-2 border-b border-gray-200 dark:border-[#222222]">
-                            <h3 className="text-gray-900 dark:text-white text-sm font-light">Ask your doubts</h3>
+                    <div className={`${isMobileView ? `mobile-chat-container ${isChatClosing ? 'slide-down' : ''}` : 'flex flex-col h-full min-h-0 overflow-hidden lg:border-l lg:border-t-0 sm:border-t sm:border-l-0 bg-white dark:bg-[#111111] border-gray-200 dark:border-[#222222]'} chat-container`}>
+                        <div className="chat-header flex justify-between items-center gap-2 px-2 sm:px-3 py-2 border-b border-gray-200 dark:border-[#222222] flex-shrink-0">
+                            <h3 className="text-gray-900 dark:text-white text-sm font-light truncate">
+                                {discussionEnabled && rightColumnMode === "community"
+                                    ? "Community"
+                                    : "Ask your doubts"}
+                            </h3>
 
                             <button
                                 onClick={handleAskDoubt}
-                                className="text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-[#222222] rounded-full p-1 transition-colors cursor-pointer"
+                                className="text-gray-600 dark:text-white hover:bg-gray-100 dark:hover:bg-[#222222] rounded-full p-1 transition-colors cursor-pointer flex-shrink-0"
                                 aria-label="Close chat"
                             >
                                 <X size={18} />
                             </button>
                         </div>
-                        <ChatView
-                            currentChatHistory={chatHistory}
-                            isAiResponding={isAiResponding}
-                            showPreparingReport={false}
-                            isChatHistoryLoaded={true}
-                            isTestMode={false}
-                            taskType="learning_material"
-                            isSubmitting={isSubmitting}
-                            currentAnswer={currentAnswer}
-                            handleInputChange={handleChatInputChange}
-                            handleSubmitAnswer={handleChatSubmit}
-                            handleAudioSubmit={handleAudioSubmit}
-                            handleViewScorecard={handleViewScorecard}
-                            completedQuestionIds={{}}
-                            handleRetry={handleRetry}
-                        />
+                        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                            {discussionEnabled && rightColumnMode === "community" ? (
+                                <ModuleDiscussionPanel
+                                    variant="embedded"
+                                    open={true}
+                                    onClose={() => setRightColumnMode("ai")}
+                                    cohortId={discussionCohortId!}
+                                    courseId={discussionCourseId!}
+                                    milestoneId={discussionMilestoneId!}
+                                    userId={userId}
+                                    initialTaskId={taskId ?? null}
+                                    initialQuestionId={discussionQuestionId}
+                                    initialCommunityTab={communityInitialTab}
+                                    communityFocusSeq={communityFocusSeq}
+                                />
+                            ) : (
+                                <ChatView
+                                    currentChatHistory={chatHistory}
+                                    isAiResponding={isAiResponding}
+                                    showPreparingReport={false}
+                                    isChatHistoryLoaded={true}
+                                    isTestMode={false}
+                                    taskType="learning_material"
+                                    isSubmitting={isSubmitting}
+                                    currentAnswer={currentAnswer}
+                                    handleInputChange={handleChatInputChange}
+                                    handleSubmitAnswer={handleChatSubmit}
+                                    handleAudioSubmit={handleAudioSubmit}
+                                    handleViewScorecard={handleViewScorecard}
+                                    completedQuestionIds={{}}
+                                    handleRetry={handleRetry}
+                                />
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

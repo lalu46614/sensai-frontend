@@ -2,8 +2,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { ModuleItem, Module } from "@/types/course";
 import CourseModuleList from "./CourseModuleList";
+import ModuleDiscussionPanel, { type CommunityTab } from "./ModuleDiscussionPanel";
 import dynamic from "next/dynamic";
-import { X, CheckCircle, BookOpen, HelpCircle, Clipboard, ChevronLeft, ChevronRight, Menu, FileText, Brain, ClipboardList, Loader2, PenSquare } from "lucide-react";
+import { X, CheckCircle, BookOpen, HelpCircle, Clipboard, ChevronLeft, ChevronRight, Menu, FileText, Brain, ClipboardList, Loader2, PenSquare, MessageSquare, BarChart2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import confetti from "canvas-confetti";
 import SuccessSound from "./SuccessSound";
@@ -43,6 +44,9 @@ interface LearnerCourseViewProps {
     taskId?: string | null;
     questionId?: string | null;
     onUpdateTaskAndQuestionIdInUrl?: (taskId: string | null, questionId: string | null) => void;
+    /** When set with cohortId, enables module discussion for learners (not admin preview). */
+    courseId?: string;
+    cohortId?: string;
 }
 
 export default function LearnerCourseView({
@@ -60,6 +64,8 @@ export default function LearnerCourseView({
     taskId = null,
     questionId = null,
     onUpdateTaskAndQuestionIdInUrl = () => { },
+    courseId,
+    cohortId,
 }: LearnerCourseViewProps) {
     // Get user from auth context
     const { user } = useAuth();
@@ -103,6 +109,23 @@ export default function LearnerCourseView({
     // Tracks whether the "Ask a doubt" chat overlay is open (mobile).
     // Used to hide the prev/next footer so the chat input isn't covered.
     const [isAskDoubtOpen, setIsAskDoubtOpen] = useState(false);
+
+    const [moduleDiscussion, setModuleDiscussion] = useState<{
+        milestoneId: string;
+        taskId?: string | null;
+        questionId?: string | null;
+    } | null>(null);
+
+    const [communityFocusSeq, setCommunityFocusSeq] = useState(0);
+    const [communityInitialTab, setCommunityInitialTab] = useState<CommunityTab>("discussion");
+
+    const focusCommunityPanel = (tab: CommunityTab) => {
+        setCommunityInitialTab(tab);
+        setCommunityFocusSeq((n) => n + 1);
+    };
+
+    const moduleDiscussionEnabled =
+        Boolean(courseId && cohortId && userId && !viewOnly && !isAdminView);
 
     // List of encouragement messages
     const encouragementMessages = [
@@ -997,6 +1020,19 @@ export default function LearnerCourseView({
                     onOpenItem={openTaskItem}
                     completedTaskIds={completedTasks}
                     completedQuestionIds={localCompletedQuestionIds}
+                    courseId={courseId}
+                    discussionCohortId={moduleDiscussionEnabled ? cohortId : undefined}
+                    discussionUserId={moduleDiscussionEnabled ? userId : undefined}
+                    onOpenModuleDiscussion={
+                        moduleDiscussionEnabled
+                            ? (moduleId) =>
+                                  setModuleDiscussion({
+                                      milestoneId: moduleId,
+                                      taskId: null,
+                                      questionId: null,
+                                  })
+                            : undefined
+                    }
                 />
             ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -1016,6 +1052,19 @@ export default function LearnerCourseView({
 
             {/* Module Completion Sound */}
             <ModuleCompletionSound play={playModuleCompletionSound} />
+
+            {moduleDiscussionEnabled && moduleDiscussion && cohortId && courseId && (
+                <ModuleDiscussionPanel
+                    open={true}
+                    onClose={() => setModuleDiscussion(null)}
+                    cohortId={cohortId}
+                    courseId={courseId}
+                    milestoneId={moduleDiscussion.milestoneId}
+                    userId={userId}
+                    initialTaskId={moduleDiscussion.taskId}
+                    initialQuestionId={moduleDiscussion.questionId}
+                />
+            )}
 
             {/* Navigation Confirmation Dialog */}
             <ConfirmationDialog
@@ -1232,6 +1281,32 @@ export default function LearnerCourseView({
                                     </div>
                                 </div>
                                 <div className="flex items-center space-x-3 flex-shrink-0 ml-2">
+                                    {moduleDiscussionEnabled && activeModuleId && (
+                                        <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+                                            {(
+                                                [
+                                                    { tab: "discussion" as const, label: "Discuss", Icon: MessageSquare },
+                                                    { tab: "poll" as const, label: "Poll", Icon: BarChart2 },
+                                                    { tab: "qa" as const, label: "Q&A", Icon: HelpCircle },
+                                                ] as const
+                                            ).map(({ tab, label, Icon }) => (
+                                                <button
+                                                    key={tab}
+                                                    type="button"
+                                                    onClick={() => focusCommunityPanel(tab)}
+                                                    className={`flex items-center px-2.5 py-2 text-xs sm:text-sm rounded-full border transition-colors cursor-pointer ${
+                                                        completedTasks[activeItem?.id]
+                                                            ? "text-white border-white/40 hover:bg-white/10"
+                                                            : "text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-[#222]"
+                                                    }`}
+                                                    aria-label={`Open ${label} beside content`}
+                                                >
+                                                    <Icon size={14} className="mr-1.5 sm:mr-2 flex-shrink-0" />
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                     {/* Show completed status for learning material/quiz that has been completed */}
                                     {completedTasks[activeItem.id] && (
                                         <button
@@ -1294,6 +1369,14 @@ export default function LearnerCourseView({
                                                 onMarkComplete={!completedTasks[activeItem?.id] && !viewOnly ? markTaskComplete : undefined}
                                                 viewOnly={viewOnly}
                                                 onChatOpenChange={setIsAskDoubtOpen}
+                                                discussionCohortId={moduleDiscussionEnabled ? cohortId : undefined}
+                                                discussionCourseId={moduleDiscussionEnabled ? courseId : undefined}
+                                                discussionMilestoneId={
+                                                    moduleDiscussionEnabled && activeModuleId ? activeModuleId : undefined
+                                                }
+                                                communityFocusSeq={communityFocusSeq}
+                                                communityInitialTab={communityInitialTab}
+                                                discussionQuestionId={null}
                                             />
                                         )}
                                         {(activeItem?.type === 'quiz') && (
@@ -1311,6 +1394,13 @@ export default function LearnerCourseView({
                                                     onAiRespondingChange={handleAiRespondingChange}
                                                     className={`${isSidebarOpen ? 'sidebar-visible' : ''}`}
                                                     isAdminView={isAdminView}
+                                                    discussionCohortId={moduleDiscussionEnabled ? cohortId : undefined}
+                                                    discussionCourseId={moduleDiscussionEnabled ? courseId : undefined}
+                                                    discussionMilestoneId={
+                                                        moduleDiscussionEnabled && activeModuleId ? activeModuleId : undefined
+                                                    }
+                                                    communityFocusSeq={communityFocusSeq}
+                                                    communityInitialTab={communityInitialTab}
                                                 />
                                             </>
                                         )}
@@ -1324,6 +1414,13 @@ export default function LearnerCourseView({
                                                 viewOnly={viewOnly}
                                                 onTaskComplete={handleTaskCompletion}
                                                 onAiRespondingChange={handleAiRespondingChange}
+                                                discussionCohortId={moduleDiscussionEnabled ? cohortId : undefined}
+                                                discussionCourseId={moduleDiscussionEnabled ? courseId : undefined}
+                                                discussionMilestoneId={
+                                                    moduleDiscussionEnabled && activeModuleId ? activeModuleId : undefined
+                                                }
+                                                communityFocusSeq={communityFocusSeq}
+                                                communityInitialTab={communityInitialTab}
                                             />
                                         )}
                                     </>

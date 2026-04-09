@@ -23,6 +23,8 @@ interface LearnerCohortViewProps {
     modules: Module[];
     schoolId?: string;
     cohortId?: string;
+    /** Active course id for module-scoped discussion API */
+    courseId?: string;
     streakDays?: number;
     activeDays?: string[];
     completedTaskIds?: Record<string, boolean>;
@@ -45,6 +47,7 @@ export default function LearnerCohortView({
     modules,
     schoolId,
     cohortId,
+    courseId,
     streakDays = 0,
     activeDays = [],
     completedTaskIds = {},
@@ -425,6 +428,8 @@ export default function LearnerCohortView({
                             taskId={taskId}
                             questionId={questionId}
                             onUpdateTaskAndQuestionIdInUrl={onUpdateTaskAndQuestionIdInUrl}
+                            courseId={courseId}
+                            cohortId={cohortId}
                         />
                     </div>
                 </div>

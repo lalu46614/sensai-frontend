@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronUp, ChevronDown, ChevronRight, ChevronDown as ChevronDownExpand, Plus, HelpCircle, Trash, Clipboard, Check, Loader2, Copy, FileText, Brain, BookOpen, PenSquare, FileQuestion, ClipboardList, Lock, Ban } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight, ChevronDown as ChevronDownExpand, Plus, HelpCircle, Trash, Clipboard, Check, Loader2, Copy, FileText, Brain, BookOpen, PenSquare, FileQuestion, ClipboardList, Lock, Ban, MessageSquare } from "lucide-react";
 import { Module, ModuleItem, Quiz } from "@/types/course";
 import { QuizQuestion } from "@/types/quiz"; // Import from types instead
 import CourseItemDialog from "@/components/CourseItemDialog";
@@ -31,6 +31,9 @@ interface CourseModuleListProps {
     completedQuestionIds?: Record<string, Record<string, boolean>>; // Add prop for partially completed quiz questions
     schoolId?: string; // Add school ID for fetching scorecards
     courseId?: string; // Add courseId for fetching learning materials
+    discussionCohortId?: string;
+    discussionUserId?: string;
+    onOpenModuleDiscussion?: (moduleId: string) => void;
 
     // Dialog-related props
     isDialogOpen?: boolean;
@@ -74,6 +77,9 @@ export default function CourseModuleList({
     completedQuestionIds = {}, // Default empty object for completed question IDs
     schoolId,
     courseId,
+    discussionCohortId,
+    discussionUserId,
+    onOpenModuleDiscussion,
 
     // Dialog-related props
     isDialogOpen = false,
@@ -846,33 +852,52 @@ export default function CourseModuleList({
                                         </div>
                                     )}
 
-                                    {/* Add expand/collapse button on the right side for view mode */}
+                                    {/* Discussion + expand/collapse for view mode */}
                                     {mode === 'view' && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                // Prevent toggling locked modules
-                                                if (module.unlockAt) return;
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            {discussionCohortId &&
+                                                courseId &&
+                                                discussionUserId &&
+                                                onOpenModuleDiscussion && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onOpenModuleDiscussion(module.id);
+                                                        }}
+                                                        className="flex items-center px-3 py-1 text-sm focus:outline-none focus:ring-0 transition-colors rounded-full border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white cursor-pointer"
+                                                        aria-label="Open module discussion"
+                                                    >
+                                                        <MessageSquare size={16} className="sm:mr-1" />
+                                                        <span className="hidden sm:inline">Discussion</span>
+                                                    </button>
+                                                )}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    // Prevent toggling locked modules
+                                                    if (module.unlockAt) return;
 
-                                                onToggleModule(module.id);
+                                                    onToggleModule(module.id);
 
-                                            }}
-                                            className={`flex items-center px-3 py-1 text-sm focus:outline-none focus:ring-0 focus:border-0 transition-colors rounded-full border ${module.unlockAt ? 'text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 cursor-pointer'}`}
-                                            aria-label={getIsExpanded(module.id) ? "Collapse module" : "Expand module"}
-                                            disabled={!!module.unlockAt}
-                                        >
-                                            {getIsExpanded(module.id) ? (
-                                                <>
-                                                    <ChevronUp size={16} className="mr-1" />
-                                                    <span className="hidden sm:inline">Collapse</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ChevronDown size={16} className="mr-1" />
-                                                    <span className="hidden sm:inline">Expand</span>
-                                                </>
-                                            )}
-                                        </button>
+                                                }}
+                                                className={`flex items-center px-3 py-1 text-sm focus:outline-none focus:ring-0 focus:border-0 transition-colors rounded-full border ${module.unlockAt ? 'text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 cursor-pointer'}`}
+                                                aria-label={getIsExpanded(module.id) ? "Collapse module" : "Expand module"}
+                                                disabled={!!module.unlockAt}
+                                            >
+                                                {getIsExpanded(module.id) ? (
+                                                    <>
+                                                        <ChevronUp size={16} className="mr-1" />
+                                                        <span className="hidden sm:inline">Collapse</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ChevronDown size={16} className="mr-1" />
+                                                        <span className="hidden sm:inline">Expand</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
 

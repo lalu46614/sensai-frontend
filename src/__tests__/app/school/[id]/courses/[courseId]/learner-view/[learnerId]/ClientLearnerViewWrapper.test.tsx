@@ -55,8 +55,9 @@ describe('ClientLearnerViewWrapper', () => {
         modules: mockModules,
         learnerId: 'test-learner-123',
         cohortId: '456',
-        courseId: 'course-789',
-        isAdminView: true
+        courseId: '789',
+        isAdminView: true,
+        learnerName: 'Test Learner',
     };
 
     beforeEach(() => {
@@ -171,7 +172,10 @@ describe('ClientLearnerViewWrapper', () => {
                 completedQuestionIds: mockCompletionData.questionCompletions,
                 viewOnly: true,
                 learnerId: 'test-learner-123',
-                isAdminView: true
+                isAdminView: true,
+                learnerName: 'Test Learner',
+                courseId: '789',
+                cohortId: '456',
             }, undefined);
         });
 

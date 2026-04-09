@@ -77,6 +77,8 @@ export default function ClientLearnerViewWrapper({
             learnerId={learnerId}
             isAdminView={isAdminView}
             learnerName={learnerName}
+            courseId={courseId}
+            cohortId={cohortId}
         />
     );
 } 

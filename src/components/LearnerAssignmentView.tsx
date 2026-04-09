@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import BlockNoteEditor from "./BlockNoteEditor";
 import ChatView from "./ChatView";
+import ModuleDiscussionPanel, { type CommunityTab } from "./ModuleDiscussionPanel";
 import ScorecardView from "./ScorecardView";
 import { ChatMessage, ScorecardItem } from "../types/quiz";
 import { getDraft, setDraft, deleteDraft } from '@/lib/utils/indexedDB';
@@ -32,6 +33,11 @@ interface LearnerAssignmentViewProps {
     className?: string;
     onTaskComplete?: (taskId: string, isComplete: boolean) => void;
     onAiRespondingChange?: (isResponding: boolean) => void;
+    discussionCohortId?: string;
+    discussionCourseId?: string;
+    discussionMilestoneId?: string;
+    communityFocusSeq?: number;
+    communityInitialTab?: CommunityTab;
 }
 
 // Local chat message type aligned with ChatView expectations
@@ -70,6 +76,11 @@ export default function LearnerAssignmentView({
     className = "",
     onTaskComplete,
     onAiRespondingChange,
+    discussionCohortId,
+    discussionCourseId,
+    discussionMilestoneId,
+    communityFocusSeq = 0,
+    communityInitialTab = "discussion",
 }: LearnerAssignmentViewProps) {
     const { user } = useAuth();
     // Use global theme (html.dark) as the source of truth.
@@ -122,6 +133,22 @@ export default function LearnerAssignmentView({
             onAiRespondingChange(isAiResponding);
         }
     }, [isAiResponding, onAiRespondingChange]);
+
+    const [rightColumnMode, setRightColumnMode] = useState<"ai" | "community">("ai");
+
+    const discussionEnabled = Boolean(
+        discussionCohortId &&
+            discussionCourseId &&
+            discussionMilestoneId &&
+            userId &&
+            taskId &&
+            !viewOnly
+    );
+
+    useEffect(() => {
+        if (!communityFocusSeq) return;
+        setRightColumnMode("community");
+    }, [communityFocusSeq]);
 
     // Fetch assignment data from API when taskId changes
     useEffect(() => {
@@ -1196,41 +1223,64 @@ export default function LearnerAssignmentView({
                     </div>
                 </div>
 
-                {/* Right: Upload + Chat */}
-                <div className="flex flex-col h-full overflow-auto lg:border-l lg:border-t-0 sm:border-t sm:border-l-0 chat-container bg-white border border-gray-200 dark:bg-[#111111] dark:border-[#222222]">
+                {/* Right: Upload + Chat / Discussion */}
+                <div className="flex flex-col h-full min-h-0 overflow-hidden lg:border-l lg:border-t-0 sm:border-t sm:border-l-0 chat-container bg-white border border-gray-200 dark:bg-[#111111] dark:border-[#222222]">
                     {isViewingScorecard ? (
-                        /* Use the ScorecardView component */
                         <ScorecardView
                             activeScorecard={activeScorecard}
                             handleBackToChat={handleBackToChat}
                             lastUserMessage={null}
                         />
                     ) : (
-                        /* Use the ChatView component */
-                        <div className="flex-1 min-h-0">
-                            <ChatView
-                                currentChatHistory={chatHistoryForView}
-                                isAiResponding={isAiResponding}
-                                showPreparingReport={showPreparingReport}
-                                isChatHistoryLoaded={isChatHistoryLoaded}
-                                isTestMode={isTestMode}
-                                taskType={'assignment'}
-                                currentQuestionConfig={currentQuestionConfig}
-                                isSubmitting={isSubmitting}
-                                currentAnswer={currentAnswer}
-                                handleInputChange={handleInputChange}
-                                handleSubmitAnswer={() => handleSubmitAnswer()}
-                                handleAudioSubmit={handleAudioSubmit}
-                                handleViewScorecard={handleViewScorecard}
-                                viewOnly={viewOnly || isCompleted}
-                                completedQuestionIds={{}}
-                                currentQuestionId={"assignment"}
-                                userId={userId}
-                                showUploadSection={needsResubmission}
-                                onFileUploaded={handleFileSubmit}
-                                    onFileDownload={handleFileDownload}
-                            />
-                        </div>
+                        <>
+                            {discussionEnabled && (
+                                <div className="flex justify-between items-center gap-2 px-2 sm:px-3 py-2 border-b border-gray-200 dark:border-[#222222] flex-shrink-0">
+                                    <h3 className="text-gray-900 dark:text-white text-sm font-light truncate">
+                                        {rightColumnMode === "community" ? "Community" : "Assistant"}
+                                    </h3>
+                                </div>
+                            )}
+                            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                                {discussionEnabled && rightColumnMode === "community" ? (
+                                    <ModuleDiscussionPanel
+                                        variant="embedded"
+                                        open={true}
+                                        onClose={() => setRightColumnMode("ai")}
+                                        cohortId={discussionCohortId!}
+                                        courseId={discussionCourseId!}
+                                        milestoneId={discussionMilestoneId!}
+                                        userId={userId}
+                                        initialTaskId={taskId}
+                                        initialQuestionId={null}
+                                        initialCommunityTab={communityInitialTab}
+                                        communityFocusSeq={communityFocusSeq}
+                                    />
+                                ) : (
+                                    <ChatView
+                                        currentChatHistory={chatHistoryForView}
+                                        isAiResponding={isAiResponding}
+                                        showPreparingReport={showPreparingReport}
+                                        isChatHistoryLoaded={isChatHistoryLoaded}
+                                        isTestMode={isTestMode}
+                                        taskType={"assignment"}
+                                        currentQuestionConfig={currentQuestionConfig}
+                                        isSubmitting={isSubmitting}
+                                        currentAnswer={currentAnswer}
+                                        handleInputChange={handleInputChange}
+                                        handleSubmitAnswer={() => handleSubmitAnswer()}
+                                        handleAudioSubmit={handleAudioSubmit}
+                                        handleViewScorecard={handleViewScorecard}
+                                        viewOnly={viewOnly || isCompleted}
+                                        completedQuestionIds={{}}
+                                        currentQuestionId={"assignment"}
+                                        userId={userId}
+                                        showUploadSection={needsResubmission}
+                                        onFileUploaded={handleFileSubmit}
+                                        onFileDownload={handleFileDownload}
+                                    />
+                                )}
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

@@ -550,6 +550,11 @@ export default function ClientSchoolMemberView({ slug }: { slug: string }) {
                                                                 modules={courseModules}
                                                                 schoolId={school.id.toString()}
                                                                 cohortId={activeCohort?.id.toString()}
+                                                                courseId={
+                                                                    courses[activeCourseIndex]?.id != null
+                                                                        ? String(courses[activeCourseIndex].id)
+                                                                        : undefined
+                                                                }
                                                                 streakDays={2}
                                                                 activeDays={["M", "T"]}
                                                                 completedTaskIds={completedTaskIds}

@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, MoreVertical, Maximize2, Minimize2, MessageC
 import BlockNoteEditor from "./BlockNoteEditor";
 import { QuizQuestion, ChatMessage, ScorecardItem, AIResponse, QuizQuestionConfig } from "../types/quiz";
 import ChatView, { CodeViewState, ChatViewHandle } from './ChatView';
+import ModuleDiscussionPanel, { type CommunityTab } from './ModuleDiscussionPanel';
 import ScorecardView from './ScorecardView';
 import ConfirmationDialog from './ConfirmationDialog';
 import { getKnowledgeBaseContent } from './QuizEditor';
@@ -42,6 +43,11 @@ export interface LearnerQuizViewProps {
     onAiRespondingChange?: (isResponding: boolean) => void;
     onMobileViewChange?: (mode: MobileViewMode) => void;
     isAdminView?: boolean;
+    discussionCohortId?: string;
+    discussionCourseId?: string;
+    discussionMilestoneId?: string;
+    communityFocusSeq?: number;
+    communityInitialTab?: CommunityTab;
 }
 
 export default function LearnerQuizView({
@@ -58,6 +64,11 @@ export default function LearnerQuizView({
     onAiRespondingChange,
     onMobileViewChange,
     isAdminView = false,
+    discussionCohortId,
+    discussionCourseId,
+    discussionMilestoneId,
+    communityFocusSeq = 0,
+    communityInitialTab = "discussion",
 }: LearnerQuizViewProps) {
     const { user } = useAuth();
     // Use global theme (html.dark) as the source of truth to avoid reload-required mismatches.
@@ -205,6 +216,22 @@ export default function LearnerQuizView({
 
     // Reference to the ChatView component
     const chatViewRef = useRef<ChatViewHandle>(null);
+
+    const [rightColumnMode, setRightColumnMode] = useState<"ai" | "community">("ai");
+
+    const discussionEnabled = Boolean(
+        discussionCohortId &&
+            discussionCourseId &&
+            discussionMilestoneId &&
+            userId &&
+            taskId &&
+            !viewOnly
+    );
+
+    useEffect(() => {
+        if (!communityFocusSeq) return;
+        setRightColumnMode("community");
+    }, [communityFocusSeq]);
 
     // Store the current answer in a ref to avoid re-renders
     const currentAnswerRef = useRef(currentAnswer);
@@ -1016,7 +1043,23 @@ export default function LearnerQuizView({
                             let streamingComplete = false;
 
                             while (true) {
-                                const { done, value } = await reader.read();
+                                let readResult: ReadableStreamReadResult<Uint8Array>;
+                                try {
+                                    readResult = await reader.read();
+                                } catch (readError: unknown) {
+                                    // Chrome/Firefox throw TypeError "network error" when the TCP connection
+                                    // drops mid-stream (backend crash, uvicorn --reload, proxy timeout, LLM disconnect).
+                                    const isNetworkError =
+                                        readError instanceof TypeError &&
+                                        String((readError as Error).message)
+                                            .toLowerCase()
+                                            .includes('network');
+                                    if (isNetworkError) {
+                                        throw new Error('AI_STREAM_NETWORK_ERROR');
+                                    }
+                                    throw readError;
+                                }
+                                const { done, value } = readResult;
 
                                 if (done) {
                                     streamingComplete = true;
@@ -1237,10 +1280,15 @@ export default function LearnerQuizView({
                 .catch(error => {
                     console.error('Error fetching AI response:', error);
 
+                    const isStreamDisconnect =
+                        error instanceof Error && error.message === 'AI_STREAM_NETWORK_ERROR';
+
                     // Show error message to the user
-                    const errorMessage = responseType === 'audio'
-                        ? "There was an error while processing your audio. Please try again."
-                        : "There was an error while processing your answer. Please try again.";
+                    const errorMessage = isStreamDisconnect
+                        ? "The AI connection dropped before the answer finished. Check the backend terminal for errors, confirm OPENAI_API_KEY and network access, and try again. Avoid restarting the server during a request."
+                        : responseType === 'audio'
+                            ? "There was an error while processing your audio. Please try again."
+                            : "There was an error while processing your answer. Please try again.";
 
                     const errorResponse: ChatMessage = {
                         id: `ai-error-${Date.now()}`,
@@ -2086,43 +2134,72 @@ export default function LearnerQuizView({
                     </div>
                 </div>
 
-                {/* Middle column - Chat/Code View */}
-                <div className="flex flex-col h-full overflow-auto lg:border-l lg:border-t-0 sm:border-t sm:border-l-0 chat-container bg-white border border-gray-200 dark:bg-[#111111] dark:border-[#222222]">
+                {/* Middle column - Chat/Code View / Discussion */}
+                <div className="flex flex-col h-full min-h-0 overflow-hidden lg:border-l lg:border-t-0 sm:border-t sm:border-l-0 chat-container bg-white border border-gray-200 dark:bg-[#111111] dark:border-[#222222]">
                     {isViewingScorecard ? (
-                        /* Use the ScorecardView component */
                         <ScorecardView
                             activeScorecard={activeScorecard}
                             handleBackToChat={handleBackToChat}
                             lastUserMessage={getLastUserMessage as ChatMessage | null}
                         />
                     ) : (
-                        /* Use the ChatView component */
-                        <ChatView
-                            currentChatHistory={currentChatHistory as ChatMessage[]}
-                            isAiResponding={isAiResponding}
-                            showPreparingReport={showPreparingReport}
-                            isChatHistoryLoaded={isChatHistoryLoaded}
-                            isTestMode={isTestMode}
-                            taskType='quiz'
-                            currentQuestionConfig={validQuestions[currentQuestionIndex]?.config}
-                            isSubmitting={isSubmitting}
-                            currentAnswer={currentAnswer}
-                            handleInputChange={handleInputChange}
-                            handleSubmitAnswer={handleSubmitAnswer}
-                            handleAudioSubmit={handleAudioSubmit}
-                            handleViewScorecard={handleViewScorecard}
-                            viewOnly={viewOnly}
-                            completedQuestionIds={completedQuestionIds}
-                            currentQuestionId={validQuestions[currentQuestionIndex]?.id}
-                            handleRetry={handleRetry}
-                            onCodeStateChange={handleCodeStateChange}
-                            initialIsViewingCode={isCodeQuestion}
-                            showLearnerView={showLearnerView}
-                            onShowLearnerViewChange={setShowLearnerView}
-                            isAdminView={isAdminView}
-                            userId={userId}
-                            ref={chatViewRef}
-                        />
+                        <>
+                            {discussionEnabled && (
+                                <div className="flex justify-between items-center gap-2 px-2 sm:px-3 py-2 border-b border-gray-200 dark:border-[#222222] flex-shrink-0">
+                                    <h3 className="text-gray-900 dark:text-white text-sm font-light truncate">
+                                        {rightColumnMode === "community" ? "Community" : "Assistant"}
+                                    </h3>
+                                </div>
+                            )}
+                            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                                {discussionEnabled && rightColumnMode === "community" ? (
+                                    <ModuleDiscussionPanel
+                                        variant="embedded"
+                                        open={true}
+                                        onClose={() => setRightColumnMode("ai")}
+                                        cohortId={discussionCohortId!}
+                                        courseId={discussionCourseId!}
+                                        milestoneId={discussionMilestoneId!}
+                                        userId={userId}
+                                        initialTaskId={taskId}
+                                        initialQuestionId={
+                                            validQuestions[currentQuestionIndex]?.id != null
+                                                ? String(validQuestions[currentQuestionIndex].id)
+                                                : null
+                                        }
+                                        initialCommunityTab={communityInitialTab}
+                                        communityFocusSeq={communityFocusSeq}
+                                    />
+                                ) : (
+                                    <ChatView
+                                        currentChatHistory={currentChatHistory as ChatMessage[]}
+                                        isAiResponding={isAiResponding}
+                                        showPreparingReport={showPreparingReport}
+                                        isChatHistoryLoaded={isChatHistoryLoaded}
+                                        isTestMode={isTestMode}
+                                        taskType="quiz"
+                                        currentQuestionConfig={validQuestions[currentQuestionIndex]?.config}
+                                        isSubmitting={isSubmitting}
+                                        currentAnswer={currentAnswer}
+                                        handleInputChange={handleInputChange}
+                                        handleSubmitAnswer={handleSubmitAnswer}
+                                        handleAudioSubmit={handleAudioSubmit}
+                                        handleViewScorecard={handleViewScorecard}
+                                        viewOnly={viewOnly}
+                                        completedQuestionIds={completedQuestionIds}
+                                        currentQuestionId={validQuestions[currentQuestionIndex]?.id}
+                                        handleRetry={handleRetry}
+                                        onCodeStateChange={handleCodeStateChange}
+                                        initialIsViewingCode={isCodeQuestion}
+                                        showLearnerView={showLearnerView}
+                                        onShowLearnerViewChange={setShowLearnerView}
+                                        isAdminView={isAdminView}
+                                        userId={userId}
+                                        ref={chatViewRef}
+                                    />
+                                )}
+                            </div>
+                        </>
                     )}
                 </div>
 
