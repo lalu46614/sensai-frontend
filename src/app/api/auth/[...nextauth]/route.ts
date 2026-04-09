@@ -39,6 +39,29 @@ export const authOptions = {
           }
         }
       }
+
+      // Recovery path: if an older/stale token has no backend userId,
+      // retry registering with backend using token data.
+      if (!token.userId && token.idToken && token.email) {
+        try {
+          const result = await registerUserWithBackend(
+            {
+              email: String(token.email),
+              name: token.name ? String(token.name) : undefined,
+            },
+            {
+              id_token: String(token.idToken),
+              provider: "google",
+            }
+          );
+
+          if (result?.id) {
+            token.userId = result.id;
+          }
+        } catch (error) {
+          console.error("Error recovering backend user ID from token:", error);
+        }
+      }
       
       return token;
     },
@@ -50,7 +73,7 @@ export const authOptions = {
         if (token.userId) {
           session.user.id = String(token.userId); // Ensure ID is stored as string
         } else {
-          console.log("No userId in token!");
+          console.warn("No userId in token yet; backend registration may still be pending.");
         }
         
         // Add access token to session if it exists
