@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/layout/header";
-import { Building, ChevronDown, ChevronLeft, Info } from "lucide-react";
+import { Building, ChevronDown, ChevronLeft, Hash, Info } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import CohortCard from "@/components/CohortCard";
@@ -526,14 +526,26 @@ export default function ClientSchoolMemberView({ slug }: { slug: string }) {
                                         ) : (
                                             // Course Content using LearnerCohortView or MentorCohortView
                                             <div className="w-full px-4 py-4 md:py-8">
-                                                <div className="flex justify-end mb-4">
-                                                    <Link
-                                                        href={`/school/${slug}/hubs`}
-                                                        className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-light"
-                                                    >
-                                                        Topic hubs — community posts
-                                                    </Link>
-                                                </div>
+                                                <Link
+                                                    href={`/school/${slug}/hubs`}
+                                                    className="block mb-4 rounded-lg border-none transition-colors hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 dark:focus-visible:ring-offset-black p-4 pb-3 bg-[#4ECDC4]/35 dark:bg-[#4ECDC4]/20"
+                                                >
+                                                    <div className="flex items-start gap-3 sm:gap-4">
+                                                        <Hash
+                                                            className="shrink-0 mt-0.5 text-gray-700 dark:text-gray-300"
+                                                            size={22}
+                                                            aria-hidden
+                                                        />
+                                                        <div className="min-w-0 flex-1">
+                                                            <h2 className="text-lg sm:text-xl font-light text-black dark:text-white">
+                                                                Topic hubs
+                                                            </h2>
+                                                            <p className="text-sm text-gray-700 dark:text-gray-400 mt-1 font-light">
+                                                                Community posts for this school — questions, notes, and mentor highlights.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </Link>
                                                 {courses.length > 0 && (
                                                     <div className="w-full">
                                                         {activeCohort?.role === "mentor" ? (
