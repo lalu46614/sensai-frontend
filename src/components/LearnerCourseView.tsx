@@ -10,6 +10,7 @@ import confetti from "canvas-confetti";
 import SuccessSound from "./SuccessSound";
 import ModuleCompletionSound from "./ModuleCompletionSound";
 import ConfirmationDialog from "./ConfirmationDialog";
+import TopicTagsBar from "./TopicTagsBar";
 
 // Dynamically import viewer components to avoid SSR issues
 const DynamicLearningMaterialViewer = dynamic(
@@ -1277,6 +1278,12 @@ export default function LearnerCourseView({
                                             >
                                                 {activeItem?.title}
                                             </h2>
+                                            {activeItem && (
+                                                <TopicTagsBar
+                                                    hubName={activeItem.hub_name}
+                                                    tags={activeItem.topic_tags}
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1401,6 +1408,8 @@ export default function LearnerCourseView({
                                                     }
                                                     communityFocusSeq={communityFocusSeq}
                                                     communityInitialTab={communityInitialTab}
+                                                    taskHubName={activeItem.hub_name}
+                                                    taskTopicTags={activeItem.topic_tags}
                                                 />
                                             </>
                                         )}

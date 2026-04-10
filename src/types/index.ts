@@ -54,6 +54,10 @@ export interface Task {
     questions?: any[]; // Questions for quizzes and exams
     scheduled_publish_at: string;
     is_generating: boolean;
+    course_task_id?: number;
+    hub_id?: number | null;
+    hub_name?: string | null;
+    topic_tags?: { id: number; name: string }[];
 }
 
 export interface Milestone {

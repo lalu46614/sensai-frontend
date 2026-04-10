@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/layout/header";
 import { Building, ChevronDown, ChevronLeft, Info } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import CohortCard from "@/components/CohortCard";
 import { useAuth } from "@/lib/auth";
 import LearnerCohortView from "@/components/LearnerCohortView";
@@ -525,6 +526,14 @@ export default function ClientSchoolMemberView({ slug }: { slug: string }) {
                                         ) : (
                                             // Course Content using LearnerCohortView or MentorCohortView
                                             <div className="w-full px-4 py-4 md:py-8">
+                                                <div className="flex justify-end mb-4">
+                                                    <Link
+                                                        href={`/school/${slug}/hubs`}
+                                                        className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-light"
+                                                    >
+                                                        Topic hubs — community posts
+                                                    </Link>
+                                                </div>
                                                 {courses.length > 0 && (
                                                     <div className="w-full">
                                                         {activeCohort?.role === "mentor" ? (

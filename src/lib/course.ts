@@ -1,5 +1,14 @@
 import { Task, Milestone } from "@/types";
-import { Module, ModuleItem } from "@/types/course";
+import { CourseTaskTopicTag, Module, ModuleItem } from "@/types/course";
+
+function hubFieldsFromTask(task: Task) {
+  return {
+    course_task_id: task.course_task_id,
+    hub_id: task.hub_id ?? null,
+    hub_name: task.hub_name ?? null,
+    topic_tags: (task.topic_tags || []) as CourseTaskTopicTag[],
+  };
+}
 
 /**
  * Transforms course milestones to module format for consistent UI rendering
@@ -27,7 +36,8 @@ export function transformMilestonesToModules(milestones: Milestone[] | undefined
             content: task.content || [], // Use content if available or empty array
             status: task.status,
             scheduled_publish_at: task.scheduled_publish_at,
-            isGenerating: task.is_generating
+            isGenerating: task.is_generating,
+            ...hubFieldsFromTask(task),
           });
         } else if (task.type === 'quiz') {
           moduleItems.push({
@@ -39,7 +49,8 @@ export function transformMilestonesToModules(milestones: Milestone[] | undefined
             status: task.status,
             numQuestions: task.num_questions,
             scheduled_publish_at: task.scheduled_publish_at,
-            isGenerating: task.is_generating
+            isGenerating: task.is_generating,
+            ...hubFieldsFromTask(task),
           });
         } else if (task.type === 'assignment') {
           moduleItems.push({
@@ -49,7 +60,8 @@ export function transformMilestonesToModules(milestones: Milestone[] | undefined
             type: 'assignment',
             status: task.status,
             scheduled_publish_at: task.scheduled_publish_at,
-            isGenerating: task.is_generating
+            isGenerating: task.is_generating,
+            ...hubFieldsFromTask(task),
           });
         }
       });

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronUp, ChevronDown, ChevronRight, ChevronDown as ChevronDownExpand, Plus, HelpCircle, Trash, Clipboard, Check, Loader2, Copy, FileText, Brain, BookOpen, PenSquare, FileQuestion, ClipboardList, Lock, Ban, MessageSquare } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight, ChevronDown as ChevronDownExpand, Plus, HelpCircle, Trash, Clipboard, Check, Loader2, Copy, FileText, Brain, BookOpen, PenSquare, FileQuestion, ClipboardList, Lock, Ban, MessageSquare, Tags } from "lucide-react";
 import { Module, ModuleItem, Quiz } from "@/types/course";
 import { QuizQuestion } from "@/types/quiz"; // Import from types instead
 import CourseItemDialog from "@/components/CourseItemDialog";
@@ -7,6 +7,7 @@ import ConfirmationDialog from "@/components/ConfirmationDialog";
 import Tooltip from "@/components/Tooltip"; // Import the Tooltip component
 import { formatScheduleDate } from "@/lib/utils/dateFormat"; // Import the utility function
 import { useThemePreference } from "@/lib/hooks/useThemePreference";
+import CourseTaskHubContextDialog from "@/components/CourseTaskHubContextDialog";
 
 
 interface CourseModuleListProps {
@@ -53,6 +54,9 @@ interface CourseModuleListProps {
     setShowPublishConfirmation?: (show: boolean) => void;
     onQuestionChange?: (questionId: string) => void;
     onDuplicateItem?: (moduleId: string, taskData: any, ordering: number) => Promise<void>;
+    /** When set, mentors can open hub/topic tagging per task */
+    hubContextEditorUserId?: string;
+    onHubContextSaved?: () => void;
 }
 
 export default function CourseModuleList({
@@ -99,8 +103,15 @@ export default function CourseModuleList({
     setShowPublishConfirmation = () => { },
     onQuestionChange = () => { },
     onDuplicateItem,
+    hubContextEditorUserId,
+    onHubContextSaved,
 }: CourseModuleListProps) {
     
+    const [hubContextItem, setHubContextItem] = useState<{
+        moduleId: string;
+        item: ModuleItem;
+    } | null>(null);
+
     // Track dark mode from DOM to ensure proper color calculations and re-renders
     const [isDarkModeDOM, setIsDarkModeDOM] = useState(true);
     
@@ -1076,6 +1087,21 @@ export default function CourseModuleList({
                                                                 )}
                                                             </button>
                                                         </Tooltip>
+                                                        {hubContextEditorUserId && courseId && schoolId && (
+                                                            <Tooltip content="Hub & topic tags (learners see these on the task)" position="top">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setHubContextItem({ moduleId: module.id, item });
+                                                                    }}
+                                                                    className="p-1 text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors cursor-pointer"
+                                                                    aria-label="Set hub and topics for this task"
+                                                                >
+                                                                    <Tags size={16} />
+                                                                </button>
+                                                            </Tooltip>
+                                                        )}
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -1272,6 +1298,16 @@ export default function CourseModuleList({
                     data-testid="task-delete-dialog"
                 />
             )}
+
+            <CourseTaskHubContextDialog
+                open={hubContextItem !== null}
+                onClose={() => setHubContextItem(null)}
+                orgId={schoolId || ""}
+                courseId={courseId || ""}
+                userId={hubContextEditorUserId || ""}
+                item={hubContextItem?.item ?? null}
+                onSaved={onHubContextSaved}
+            />
         </>
     );
 } 

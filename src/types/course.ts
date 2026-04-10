@@ -1,4 +1,11 @@
 import { QuizQuestion } from "./quiz";
+
+/** Org topic tag on a course task (from mentor hub context). */
+export interface CourseTaskTopicTag {
+  id: number;
+  name: string;
+}
+
 export interface LearningMaterial {
   id: string;
   title: string;
@@ -8,6 +15,10 @@ export interface LearningMaterial {
   status?: string; // Add status field to track draft/published state
   scheduled_publish_at: string | null;
   isGenerating?: boolean;
+  course_task_id?: number;
+  hub_id?: number | null;
+  hub_name?: string | null;
+  topic_tags?: CourseTaskTopicTag[];
 }
 
 export interface Quiz {
@@ -20,6 +31,10 @@ export interface Quiz {
   status?: string; // Add status field to track draft/published state
   scheduled_publish_at: string | null;
   isGenerating?: boolean;
+  course_task_id?: number;
+  hub_id?: number | null;
+  hub_name?: string | null;
+  topic_tags?: CourseTaskTopicTag[];
 }
 
 export interface Assignment {
@@ -30,6 +45,10 @@ export interface Assignment {
   status?: string;
   scheduled_publish_at: string | null;
   isGenerating?: boolean;
+  course_task_id?: number;
+  hub_id?: number | null;
+  hub_name?: string | null;
+  topic_tags?: CourseTaskTopicTag[];
 }
 
 export type ModuleItem = LearningMaterial | Quiz | Assignment;

@@ -19,6 +19,7 @@ import GenerateWithAIDialog, { GenerateWithAIFormData } from '@/components/Gener
 import SettingsDialog from "@/components/SettingsDialog";
 import { updateTaskAndQuestionIdInUrl } from "@/lib/utils/urlUtils";
 import { useThemePreference } from "@/lib/hooks/useThemePreference";
+import { useAuth } from "@/lib/auth";
 
 // Import the QuizQuestion type
 import { QuizQuestion, QuizQuestionConfig } from "../../../../../../types/quiz";
@@ -43,6 +44,7 @@ const defaultQuestionConfig: QuizQuestionConfig = {
 
 
 export default function CreateCourse() {
+    const { user } = useAuth();
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
@@ -2078,6 +2080,8 @@ export default function CreateCourse() {
                             schoolId={schoolId}
                             courseId={courseId}
                             onDuplicateItem={handleDuplicateItem}
+                            hubContextEditorUserId={user?.id != null ? String(user.id) : undefined}
+                            onHubContextSaved={fetchCourseDetails}
                         />
                     </div>
 

@@ -554,7 +554,7 @@ export default function ClientSchoolAdminView({ id }: { id: string }) {
 
                         {/* Tabs for navigation */}
                         <div className="mb-8">
-                            <div className="flex border-b border-gray-200 dark:border-gray-800">
+                            <div className="flex flex-wrap items-end border-b border-gray-200 dark:border-gray-800 gap-2">
                                 <button
                                     className={`px-4 py-2 font-light cursor-pointer ${
                                         activeTab === 'courses'
@@ -594,6 +594,12 @@ export default function ClientSchoolAdminView({ id }: { id: string }) {
                                         Team
                                     </div>
                                 </button>
+                                <Link
+                                    href={`/school/admin/${id}/hubs`}
+                                    className="ml-auto mb-2 text-sm text-indigo-600 dark:text-indigo-400 hover:underline px-2"
+                                >
+                                    Topic hubs &amp; tags
+                                </Link>
                             </div>
                         </div>
 

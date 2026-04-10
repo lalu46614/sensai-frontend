@@ -21,6 +21,7 @@ import { BlockList, RenderConfig } from "@udus/notion-renderer/components";
 import "@udus/notion-renderer/styles/globals.css";
 import "katex/dist/katex.min.css";
 import Toast from "./Toast";
+import TopicTagsBar from "./TopicTagsBar";
 import { getDraft, setDraft, deleteDraft } from '@/lib/utils/indexedDB';
 import { blobToBase64, convertAudioBufferToWav } from '@/lib/utils/audioUtils';
 
@@ -48,6 +49,9 @@ export interface LearnerQuizViewProps {
     discussionMilestoneId?: string;
     communityFocusSeq?: number;
     communityInitialTab?: CommunityTab;
+    /** Shown under the question header when the course task has hub/topic context */
+    taskHubName?: string | null;
+    taskTopicTags?: { id: number; name: string }[];
 }
 
 export default function LearnerQuizView({
@@ -69,6 +73,8 @@ export default function LearnerQuizView({
     discussionMilestoneId,
     communityFocusSeq = 0,
     communityInitialTab = "discussion",
+    taskHubName,
+    taskTopicTags,
 }: LearnerQuizViewProps) {
     const { user } = useAuth();
     // Use global theme (html.dark) as the source of truth to avoid reload-required mismatches.
@@ -2092,6 +2098,14 @@ export default function LearnerQuizView({
                                 Question
                             </div>
                         </div>
+                    )}
+
+                    {(taskHubName || (taskTopicTags && taskTopicTags.length > 0)) && (
+                        <TopicTagsBar
+                            hubName={taskHubName}
+                            tags={taskTopicTags}
+                            className="mb-4"
+                        />
                     )}
 
                     <div className={`flex-1 ${questions.length > 1 ? 'mt-4' : ''}`}>
